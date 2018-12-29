@@ -69,19 +69,12 @@ menu:
     icon: fa-archive
 
 widgets: ## Six widgets in sidebar provided: search, category, tag, recent_posts, rencent_comments and links.
-  - search
-  - category
   - tag
   - recent_posts
-  - recent_comments
 
 links:
-  - title: site-name1
-    url: http://www.example1.com/
-  - title: site-name2
-    url: http://www.example2.com/
-  - title: site-name3
-    url: http://www.example3.com/
+  - title: My Github
+    url: https://linchuzhi.github.io/
 
 timeline:
   - num: 1
