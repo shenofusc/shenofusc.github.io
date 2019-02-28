@@ -1,4 +1,4 @@
-disqus: linchuzhi ## Your disqus_shortname, e.g. username
+disqus: shenofusc ## Your disqus_shortname, e.g. username
 uyan: ## Your uyan_id. e.g. 1234567
 livere: ## Your livere data-uid, e.g. MTAyMC8zMDAxOC78NTgz
 changyan: ## Your changyan appid, e.g. cyrALsXc8
@@ -74,7 +74,7 @@ widgets: ## Six widgets in sidebar provided: search, category, tag, recent_posts
 
 links:
   - title: My Github
-    url: https://linchuzhi.github.io/
+    url: https://shenofusc.github.io/
 
 timeline:
   - num: 1
