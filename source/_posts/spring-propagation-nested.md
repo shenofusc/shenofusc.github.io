@@ -31,3 +31,9 @@ PROPAGATION_NESTED:Execute within a nested transaction if a current transaction 
 假设现在是 ServiceA 方法调用 ServiceB 方法，ServiceA 的传播级别为 PROPAGATION_REQUIRED，ServiceB 的传播级别为 PROPAGATION_NESTED，在出现异常的情况下，只要能够吃掉异常，不管是哪个方法的异常，事务就能够正常提交。如果不处理异常的话，不管是 ServiceA 出现异常还是 ServiceB 出现异常，内外层事务都会回滚。很多文章都提到了一个关键字：savepoint，这是一个很特别的东西，在进入 ServiceB 之前，会保存 ServiceA 当前的执行状态到 savepoint，如果 ServiceB 执行过程中出现异常的话，会回滚到 savepoint 所在的状态。但是这里有一个坑，首先，你必须得在 ServiceA 中捕获到异常并且吃掉它，否则 ServiceA 照样回滚，savepoint？不存在的。其次，如果你是在同一个对象中调用不同的方法的话，savepoint 依然是没有的。只有在不同的对象之间进行调用，才会保存 ServiceA 的执行状态到 savepoint ，ServiceB 的事务回滚时才能恢复到 savepoint 所在的状态。
 
 总结一下的话就是这个地方的状态组合超多，稍有不慎就是个大坑，不是很必要的情况下还是老老实实用默认的 PROPAGATION_REQUIRED 比较好。
+
+#### 参考链接
+
+[Spring 事务机制详解](https://juejin.im/post/5a3b1dc4f265da43333e9049)
+
+[Spring事务传播机制-REQUIRED嵌套NESTED](https://blog.csdn.net/ID19870510/article/details/78884130)
