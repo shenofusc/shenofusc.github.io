@@ -34,6 +34,6 @@ PROPAGATION_NESTED:Execute within a nested transaction if a current transaction 
 
 #### 参考链接
 
-[Spring 事务机制详解](https://juejin.im/post/5a3b1dc4f265da43333e9049)
+[Spring事务机制详解](https://juejin.im/post/5a3b1dc4f265da43333e9049)
 
 [Spring事务传播机制-REQUIRED嵌套NESTED](https://blog.csdn.net/ID19870510/article/details/78884130)
