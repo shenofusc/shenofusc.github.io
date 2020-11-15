@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta name="generator" content="Hexo 3.9.0"><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>Spring嵌套事务机制 | 沈小洋的博客</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/normalize/8.0.0/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/pure-min.css"><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/pure/1.0.0/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><link rel="alternate" type="application/atom+xml" href="/atom.xml"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">Spring嵌套事务机制</h1><a id="logo" href="/.">沈小洋的博客</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">Spring嵌套事务机制</h1><div class="post-meta">Apr 20, 2019</div><a class="disqus-comment-count" data-disqus-identifier="2019/04/20/spring-propagation-nested/" href="/2019/04/20/spring-propagation-nested/#disqus_thread"></a><div class="post-content"><p>Spring的几种事务传播机制如下:</p>
+<p>PROPAGATION_REQUIRED:Support a current transaction, create a new one if none exists.<br>PROPAGATION_SUPPORTS:Support a current transaction, execute non-transactionally if none exists.<br>PROPAGATION_MANDATORY:Support a current transaction, throw an exception if none exists.<br>PROPAGATION_REQUIRES_NEW:Create a new transaction, and suspend the current transaction if one exists.<br>PROPAGATION_NOT_SUPPORTED:Execute non-transactionally, suspend the current transaction if one exists.<br>PROPAGATION_NEVER:Execute non-transactionally, throw an exception if a transaction exists.<br>PROPAGATION_NESTED:Execute within a nested transaction if a current transaction exists, behave like PROPAGATION_REQUIRED.</p>
+<p>这里的英文注释是直接从源码里贴过来的，我感觉已经描述的非常简洁明了了。这里主要记录下最后一种: PROPAGATION_NESTED 。主要通过以下几个问题来说明下它的机制，问题如下：  </p>
+<p>1.如果子事务回滚，会发生什么？</p>
+<p>我自己做了下实验，发现如果子事务回滚的话，不仅子事务本身会回滚，父事务同样会回滚。</p>
+<blockquote>
+<p>而且实验过程中还发现了一个有意思的东西，如果数据库的主键设置为自增的话，那些没有提交的事务依然会占用自增ID，导致ID跳号。例如测试前的最后一条数据ID为 1 ，一次插入操作回滚后再执行另一次成功的插入，最新的ID会是 3 。</p>
+</blockquote>
+<p>2.如果父事务回滚，会发生什么？</p>
+<p>父事务回滚的情况和 PROPAGATION_REQUIRED 模式下没什么区别，子事务和父事务都会回滚。</p>
+<p>3.出现异常的话会发生什么？</p>
+<p>假设现在是 ServiceA 方法调用 ServiceB 方法，ServiceA 的传播级别为 PROPAGATION_REQUIRED，ServiceB 的传播级别为 PROPAGATION_NESTED，在出现异常的情况下，只要能够吃掉异常，不管是哪个方法的异常，事务就能够正常提交。如果不处理异常的话，不管是 ServiceA 出现异常还是 ServiceB 出现异常，内外层事务都会回滚。很多文章都提到了一个关键字：savepoint，这是一个很特别的东西，在进入 ServiceB 之前，会保存 ServiceA 当前的执行状态到 savepoint，如果 ServiceB 执行过程中出现异常的话，会回滚到 savepoint 所在的状态。但是这里有一个坑，首先，你必须得在 ServiceA 中捕获到异常并且吃掉它，否则 ServiceA 照样回滚，savepoint？不存在的。其次，如果你是在同一个对象中调用不同的方法的话，savepoint 依然是没有的。只有在不同的对象之间进行调用，才会保存 ServiceA 的执行状态到 savepoint ，ServiceB 的事务回滚时才能恢复到 savepoint 所在的状态。</p>
+<p>总结一下的话就是这个地方的状态组合超多，稍有不慎就是个大坑，不是很必要的情况下还是老老实实用默认的 PROPAGATION_REQUIRED 比较好。</p>
+<h4 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h4><p><a href="https://juejin.im/post/5a3b1dc4f265da43333e9049" target="_blank" rel="noopener">Spring事务机制详解</a></p>
+<p><a href="https://blog.csdn.net/ID19870510/article/details/78884130" target="_blank" rel="noopener">Spring事务传播机制-REQUIRED嵌套NESTED</a></p>
+</div><div class="tags"><a href="/tags/Spring/">Spring</a></div><div class="post-nav"><a class="pre" href="/2020/11/15/spring-propagation-nested-more/">Spring嵌套事务机制补充</a><a class="next" href="/2017/08/19/singleton-pattern/">单例模式</a></div><div id="disqus_thread"><div class="btn_click_load"><button class="disqus_click_btn">阅读评论（请确保 Disqus 可以正常加载）</button></div><script type="text/javascript">var disqus_config = function () {
+    this.page.url = 'http://shenofusc.github.com/2019/04/20/spring-propagation-nested/';
+    this.page.identifier = '2019/04/20/spring-propagation-nested/';
+    this.page.title = 'Spring嵌套事务机制';
+  };</script><script type="text/javascript" id="disqus-lazy-load-script">$.ajax({
+url: 'https://disqus.com/next/config.json',
+timeout: 2500,
+type: 'GET',
+success: function(){
+  var d = document;
+  var s = d.createElement('script');
+  s.src = '//shenofusc.disqus.com/embed.js';
+  s.setAttribute('data-timestamp', + new Date());
+  (d.head || d.body).appendChild(s);
+  $('.disqus_click_btn').css('display', 'none');
+},
+error: function() {
+  $('.disqus_click_btn').css('display', 'block');
+}
+});</script><script type="text/javascript" id="disqus-click-load">$('.btn_click_load').click(() => {  //click to load comments
+    (() => { // DON'T EDIT BELOW THIS LINE
+        var d = document;
+        var s = d.createElement('script');
+        s.src = '//shenofusc.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', + new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+    $('.disqus_click_btn').css('display','none');
+});</script><script type="text/javascript" id="disqus-count-script">$(function() {
+     var xhr = new XMLHttpRequest();
+     xhr.open('GET', '//disqus.com/next/config.json', true);
+     xhr.timeout = 2500;
+     xhr.onreadystatechange = function () {
+       if (xhr.readyState === 4 && xhr.status === 200) {
+         $('.post-meta .post-comments-count').show();
+         var s = document.createElement('script');
+         s.id = 'dsq-count-scr';
+         s.src = 'https://shenofusc.disqus.com/count.js';
+         s.async = true;
+         (document.head || document.body).appendChild(s);
+       }
+     };
+     xhr.ontimeout = function () { xhr.abort(); };
+     xhr.send(null);
+   });
+</script></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/设计模式/" style="font-size: 15px;">设计模式</a> <a href="/tags/Spring/" style="font-size: 15px;">Spring</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2020/11/15/spring-propagation-nested-more/">Spring嵌套事务机制补充</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/04/20/spring-propagation-nested/">Spring嵌套事务机制</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/08/19/singleton-pattern/">单例模式</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2020 <a href="/." rel="nofollow">沈小洋的博客.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="//cdn.bootcss.com/fancybox/3.3.5/jquery.fancybox.min.css"><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>
